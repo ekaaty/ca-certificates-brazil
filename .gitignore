@@ -1,0 +1,17 @@
+.cache
+.clang-format
+.clangd
+.idea
+
+cmake-build*
+build/
+ _CPack_Packages/
+ CMakeFiles/
+ Makefile
+ cmake_install.cmake
+ CPackConfig.cmake
+ CPackSourceConfig.cmake
+ CTestTestfile.cmake
+ CMakeCache.txt
+
+dist/
