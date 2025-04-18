@@ -1,4 +1,4 @@
-name: Build and Release
+name: Build and Release CI
 on:
   push:
   schedule:
@@ -46,7 +46,7 @@ jobs:
 
   build-fedora:
     needs: release-ci
-    uses: ${GITHUB_WORKSPACE}/.github/workflows/fedora.yml
+    uses: ./.github/workflows/fedora.yml
     with:
       #cache-file-path: ${{ needs.release-ci.outputs.ASSET }}
       version: ${{ needs.release-ci.outputs.VERSION }}
