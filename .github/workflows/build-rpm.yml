@@ -10,7 +10,7 @@ on:
       - v[0-9]+.[0-9]+.[0-9]+
 
 jobs:
-  build-rpm:
+  build-upload-rpm:
     name: Build and upload RPM packages
     runs-on: ubuntu-latest
     container:
