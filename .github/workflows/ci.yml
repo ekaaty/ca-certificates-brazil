@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Local checkout
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Install CI dependencies
         run: |
