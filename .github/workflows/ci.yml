@@ -1,0 +1,53 @@
+name: Build and Release
+on:
+  push:
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  release-ci:
+    runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.get_metadata.outputs.VERSION }}
+
+    steps:
+      - name: Local checkout
+      - uses: actions/checkout@v4
+
+      - name: Install CI dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y -qq install cmake g++ gcc
+
+      - name: Get latest package metadata
+        id: get_metadata
+        run: |
+          cmake --fresh -B build -S .
+          echo "TAG=v$(cat build/version)" >> $GITHUB_OUTPUT
+          echo "VERSION=$(cat build/version)" >> $GITHUB_OUTPUT
+
+      - name: Check if package version has corresponding git tag
+        id: tagged
+        shell: bash
+        run: |
+          git show-ref \
+            --tags --verify --quiet -- \
+            "refs/tags/${{ steps.get_metadata.outputs.TAG }}" \
+          && echo tagged=1 >> $GITHUB_OUTPUT \
+          || echo tagged=0 >> $GITHUB_OUTPUT
+
+      - name: Create new tag
+        if: steps.tagged.outputs.tagged == 0
+        run: |
+          git tag ${{ steps.get_metadata.outputs.TAG }} \
+          && git push origin ${{ steps.get_metadata.outputs.TAG  }} \
+          || exit 0
+
+#  build-fedora:
+#    needs: release-ci
+#    uses: .github/workflows/fedora.yml
+#    with:
+      #cache-file-path: ${{ needs.release-ci.outputs.ASSET }}
+#      version: ${{ needs.release-ci.outputs.VERSION }}
+#      containers: "['fedora:latest', 'fedora:41']"
