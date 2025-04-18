@@ -15,6 +15,11 @@ execute_process(
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
+execute_process(
+  COMMAND echo ${PROJECT_VERSION}
+  OUTPUT_FILE ${CMAKE_BINARY_DIR}/version
+)
+
 set(SourceFiles 
   "${CMAKE_SOURCE_DIR}/cmake"
   "${CMAKE_SOURCE_DIR}/CMakeLists.txt"
