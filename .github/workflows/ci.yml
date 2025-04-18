@@ -44,9 +44,9 @@ jobs:
           && git push origin ${{ steps.get_metadata.outputs.TAG  }} \
           || exit 0
 
-#  build-fedora:
-#    needs: release-ci
-#    uses: ./.github/workflows/fedora.yml
+  build-fedora:
+    needs: release-ci
+    uses: ./.github/workflows/fedora.yml
 #    with:
       #cache-file-path: ${{ needs.release-ci.outputs.ASSET }}
 #      version: ${{ needs.release-ci.outputs.VERSION }}
