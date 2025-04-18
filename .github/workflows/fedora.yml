@@ -3,18 +3,12 @@
 on:
   workflow_call:
     inputs:
-#      cache-file-path:
-#        required: true
-#        type: string
-      version:
-        required: true
-        type: string
       containers:
         required: true
         type: string
-
-#env:
-#  SPEC_FILE: ${GITHUB_WORKSPACE}/packaging/pkg.spec.in
+      version:
+        required: true
+        type: string
 
 jobs:
   build:
@@ -28,17 +22,6 @@ jobs:
     steps:
       - name: Local checkout
         uses: actions/checkout@v4
-#        with:
-#          repository: ${{ github.repository }}
-#          sparse-checkout: |
-#            ${SPEC_FILE}
-
-#      - uses actions/cache/restore@v4
-#        id: cache
-#        with:
-#          key: ${{ runner.os }}-v${{ inputs.version }}-${{ hashFiles(inputs.cache-file-path) }}
-#          path: ${{ inputs.cache-file-path }}
-#          fail-on-cache-miss: true
 
       - name: install RPM build dependencies
         run: |
