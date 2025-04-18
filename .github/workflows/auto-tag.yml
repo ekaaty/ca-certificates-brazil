@@ -4,6 +4,7 @@ on:
   push:
   schedule:
     - cron: '30 3 * * *'
+  workflow_dispatch:
 
 jobs:
   create-tag:
@@ -36,5 +37,5 @@ jobs:
         if: steps.tagged.outputs.tagged == 0
         run: |
           git tag ${NEW_TAG} \
-          && git push origin ${NEW_TAG}) \
+          && git push origin ${NEW_TAG} \
           || exit 0
