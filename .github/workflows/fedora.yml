@@ -7,7 +7,7 @@ on:
         required: true
         type: string
       version:
-        required: true
+        required: false
         type: string
 
 jobs:
@@ -45,15 +45,14 @@ jobs:
 
       - name: Set environment variables
         run: |
-#          echo "PKG_VERSION=$(cat build/version)" >> $GITHUB_ENV
+          echo "PKG_VERSION=$(cat build/version)" >> $GITHUB_ENV
           echo "PKG_NAME=$(grep -Po 'Name:\ *\K[\S ]*' \
             packaging/pkg.spec.in)" >> $GITHUB_ENV
 
       - name: Copy SOURCES and SPEC file
         run: |
           cp packaging/pkg.spec.in ~/rpmbuild/SPECS/${PKG_NAME}.spec
-#          rpmdev-bumpspec -n ${PKG_VERSION} ~/rpmbuild/SPECS/${PKG_NAME}.spec
-          rpmdev-bumpspec -n ${{ inputs.version }} ~/rpmbuild/SPECS/${PKG_NAME}.spec
+          rpmdev-bumpspec -n ${PKG_VERSION} ~/rpmbuild/SPECS/${PKG_NAME}.spec
           cp dist/*.src.tar.gz ~/rpmbuild/SOURCES/
 
       - name: Build RPM packages
