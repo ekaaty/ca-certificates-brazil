@@ -1,0 +1,97 @@
+#name: build-rpm
+
+on:
+  workflow_call:
+    inputs:
+#      cache-file-path:
+#        required: true
+#        type: string
+      version:
+        required: true
+        type: string
+      containers:
+        required: true
+        type: string
+
+#env:
+#  SPEC_FILE: ${GITHUB_WORKSPACE}/packaging/pkg.spec.in
+
+jobs:
+  build:
+    strategy:
+      max-parallel: 2
+      matrix:
+        image: ${{ fromJson(inputs.containers) }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+
+    steps:
+      - name: Local checkout
+        uses: actions/checkout@v4
+#        with:
+#          repository: ${{ github.repository }}
+#          sparse-checkout: |
+#            ${SPEC_FILE}
+
+#      - uses actions/cache/restore@v4
+#        id: cache
+#        with:
+#          key: ${{ runner.os }}-v${{ inputs.version }}-${{ hashFiles(inputs.cache-file-path) }}
+#          path: ${{ inputs.cache-file-path }}
+#          fail-on-cache-miss: true
+
+      - name: install RPM build dependencies
+        run: |
+          dnf -y install \
+            cmake \
+            gcc \
+            gcc-c++ \
+            git \
+            rpm-build \
+            rpmdevtools \
+            tar
+
+      - name: Setup RPM build tree
+        run: |
+          rpmdev-setuptree
+
+      - name: Create source tarball
+        run: |
+          cmake --fresh -B build -S .
+          cmake --build build --target sdist
+
+      - name: Set environment variables
+        run: |
+#          echo "PKG_VERSION=$(cat build/version)" >> $GITHUB_ENV
+          echo "PKG_NAME=$(grep -Po 'Name:\ *\K[\S ]*' \
+            packaging/pkg.spec.in)" >> $GITHUB_ENV
+
+      - name: Copy SOURCES and SPEC file
+        run: |
+          cp packaging/pkg.spec.in ~/rpmbuild/SPECS/${PKG_NAME}.spec
+#          rpmdev-bumpspec -n ${PKG_VERSION} ~/rpmbuild/SPECS/${PKG_NAME}.spec
+          rpmdev-bumpspec -n ${{ inputs.version }} ~/rpmbuild/SPECS/${PKG_NAME}.spec
+          cp dist/*.src.tar.gz ~/rpmbuild/SOURCES/
+
+      - name: Build RPM packages
+        run: |
+          dnf -y builddep ~/rpmbuild/SPECS/${PKG_NAME}.spec
+          rpmbuild -ba ~/rpmbuild/SPECS/${PKG_NAME}.spec
+
+      - name: Check if package version has corresponding git tag
+        id: tagged
+        shell: bash
+        run: |
+          git show-ref \
+            --tags --verify --quiet -- \
+            "refs/tags/${NEW_TAG}" \
+          && echo tagged=1 >> $GITHUB_OUTPUT \
+          || echo tagged=0 >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag' && steps.tagged.output.tagged == 1
+        with:
+          files: |
+            ~/rpmbuild/RPMS/*/*.rpm
+            ~/rpmbuild/SRPMS/*.rpm
