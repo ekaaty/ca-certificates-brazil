@@ -58,13 +58,13 @@ jobs:
           dnf -y builddep ~/rpmbuild/SPECS/${PKG_NAME}.spec
           rpmbuild -ba ~/rpmbuild/SPECS/${PKG_NAME}.spec
 
-    - name: Upload built SRPM/RPM packages
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifact-built-rpms
-        path: |
-          ~/rpmbuild/RPMS/
-          ~/rpmbuild/SRPMS/
+      - name: Upload built SRPM/RPM packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-built-rpms
+          path: |
+            ~/rpmbuild/RPMS/
+            ~/rpmbuild/SRPMS/
 
       - name: Check if package version has corresponding git tag
         id: tagged
@@ -76,11 +76,11 @@ jobs:
           && echo tagged=1 >> $GITHUB_OUTPUT \
           || echo tagged=0 >> $GITHUB_OUTPUT
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      if: github.ref_type == 'tag' && steps.tagged.output.tagged == 1
-      with:
-        generate_release_notes: false
-        files: |
-          ~/rpmbuild/RPMS/*/*.rpm
-          ~/rpmbuild/SRPMS/*.rpm
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag' && steps.tagged.output.tagged == 1
+        with:
+          generate_release_notes: false
+          files: |
+            ~/rpmbuild/RPMS/*/*.rpm
+            ~/rpmbuild/SRPMS/*.rpm
