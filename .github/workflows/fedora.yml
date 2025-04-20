@@ -9,6 +9,16 @@ on:
       version:
         required: false
         type: string
+      to_release:
+        required: false
+        type: string
+      tag:
+        required: false
+        type: string
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   build:
@@ -60,20 +70,11 @@ jobs:
           dnf -y builddep ~/rpmbuild/SPECS/${PKG_NAME}.spec
           rpmbuild -ba ~/rpmbuild/SPECS/${PKG_NAME}.spec
 
-      - name: Check if package version has corresponding git tag
-        id: tagged
-        shell: bash
-        run: |
-          git show-ref \
-            --tags --verify --quiet -- \
-            "refs/tags/${NEW_TAG}" \
-          && echo tagged=1 >> $GITHUB_OUTPUT \
-          || echo tagged=0 >> $GITHUB_OUTPUT
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: github.ref_type == 'tag' && steps.tagged.output.tagged == 1
+        if: inputs.to_release == 1
         with:
+          tag_name: ${{ inputs.tag }}
           files: |
             ~/rpmbuild/RPMS/*/*.rpm
             ~/rpmbuild/SRPMS/*.rpm
