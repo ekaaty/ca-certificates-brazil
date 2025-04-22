@@ -36,7 +36,7 @@ jobs:
       - name: Prepare - local checkout
         uses: actions/checkout@v4
 
-      - name: Prepare: install build dependencies
+      - name: Prepare - install build dependencies
         run: |
           dnf -y install \
             cmake \
