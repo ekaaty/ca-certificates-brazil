@@ -42,6 +42,7 @@ jobs:
             gcc \
             gcc-c++ \
             git \
+            openssl \
             rpm-build \
             rpmdevtools \
             tar
