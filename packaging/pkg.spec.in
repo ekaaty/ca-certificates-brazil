@@ -4,13 +4,13 @@
 %define __openssl   %{_bindir}/openssl
 
 Name:               ca-certificates-brazil
-Version:            __VERSION__
+Version:            @CPACK_PACKAGE_VERSION@
 Release:            %{autorelease}
 Summary:            The ICP-Brasil root certificate bundle
 
 License:            Public Domain
 URL:                https://www.gov.br/iti/pt-br/assuntos/certificado-digital
-Source0:            %{name}-%{version}.src.tar.gz
+Source0:            %{name}-%{version}.tar.gz
 
 BuildArch:          noarch
 BuildRequires:      %{__openssl}
@@ -28,7 +28,7 @@ also has the role of accrediting and discrediting the other participants in the
 chain, supervise and audit the processes.
 
 %prep
-%autosetup -c
+%autosetup -n %{name}-%{version}.src
 %{cmake}
 
 %build
