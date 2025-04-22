@@ -8,8 +8,7 @@ on:
         required: false
         type: string
       tag:
-        default: "v${{ input.version }}"
-        required: false
+        required: true
         type: string
       to_release:
         default: "0"
