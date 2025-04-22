@@ -6,6 +6,7 @@ set(CPACK_VERBATIM_VARIABLES YES)
 
 set(SourceIgnoreFiles 
   ".cache"
+  ".copr"
   ".clang-format"
   ".clangd"
   ".git/"
@@ -59,12 +60,84 @@ configure_file(
   @ONLY
 )
 
+if(BUILD_RPMS)
+CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/packaging/pkg.spec.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.spec"
+  @ONLY 
+  IMMEDIATE
+)
+
+set(CPACK_GENERATOR "RPM")
+set(CPACK_SOURCE_GENERATOR "RPM")
+set(CPACK_RPM_USER_PACKAGE_SOURCES ON)
+set(CPACK_RPM_USER_PACKAGE_SOURCE "${CPACK_OUTPUT_FILE_PREFIX}/${CPACK_SOURCE_PACKAGE_FILE_NAME}")
+set(CPACK_RPM_USER_BINARY_SPECFILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.spec")
+endif()
+
 include(CPack)
+
+add_custom_target(build-rpms)
+add_custom_target(no-build-rpms)
+
+add_custom_command(
+  TARGET build-rpms
+  POST_BUILD
+  COMMAND "${CMAKE_COMMAND}"
+    -DBUILD_RPMS=ON
+    -B "${CMAKE_BINARY_DIR}"
+    -S "${CMAKE_SOURCE_DIR}"
+  VERBATIM
+  USES_TERMINAL
+)
+
+add_custom_command(
+  TARGET no-build-rpms
+  POST_BUILD
+  COMMAND "${CMAKE_COMMAND}"
+    -DBUILD_RPMS=OFF
+    -B "${CMAKE_BINARY_DIR}"
+    -S "${CMAKE_SOURCE_DIR}"
+  VERBATIM
+  USES_TERMINAL
+)
+
+add_custom_target(srpm
+  COMMAND "${CMAKE_COMMAND}"
+    --build "${CMAKE_BINARY_DIR}"
+    --target package_source
+  DEPENDS build-rpms
+  VERBATIM
+  USES_TERMINAL
+)
+
+add_custom_target(rpms
+  COMMAND rpmbuild
+    --rebuild
+    --define "_rpmdir ${CPACK_OUTPUT_FILE_PREFIX}"
+    "${CPACK_OUTPUT_FILE_PREFIX}/${PROJECT_NAME}-${PROJECT_VERSION}-?.fc??.src.rpm"
+  DEPENDS build-rpms srpm
+  VERBATIM
+  USES_TERMINAL
+)
+
+add_custom_command(
+  TARGET rpms
+  POST_BUILD
+  COMMAND /bin/sh -c "find \
+    \"${CPACK_OUTPUT_FILE_PREFIX}/\" \
+    -mindepth 2 -type f -exec mv {} \"${CPACK_OUTPUT_FILE_PREFIX}/\" \; \
+    && find \"${CPACK_OUTPUT_FILE_PREFIX}\" \
+    -type d -empty -delete \
+  "
+  VERBATIM
+  USES_TERMINAL
+)
 
 add_custom_target(sdist
   COMMAND "${CMAKE_COMMAND}"
     --build "${CMAKE_BINARY_DIR}"
     --target package_source
+  DEPENDS no-build-rpms
   VERBATIM
   USES_TERMINAL
 )
@@ -73,6 +146,7 @@ add_custom_target(bdist
   COMMAND "${CMAKE_COMMAND}"
     --build "${CMAKE_BINARY_DIR}"
     --target package
+  DEPENDS no-build-rpms
   VERBATIM
   USES_TERMINAL
 )

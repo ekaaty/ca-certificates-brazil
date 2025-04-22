@@ -1,0 +1,55 @@
+%global debug_package %{nil}
+%global source_date_epoch_from_changelog 0
+
+%define __openssl   %{_bindir}/openssl
+
+Name:               ca-certificates-brazil
+Version:            @CPACK_PACKAGE_VERSION@
+Release:            %{autorelease}
+Summary:            The ICP-Brasil root certificate bundle
+
+License:            Public Domain
+URL:                https://www.gov.br/iti/pt-br/assuntos/certificado-digital
+Source0:            %{name}-%{version}.tar.gz
+
+BuildArch:          noarch
+BuildRequires:      %{__openssl}
+BuildRequires:      %{_bindir}/cmake
+BuildRequires:      %{_bindir}/mktemp
+BuildRequires:      %{_bindir}/unzip
+BuildRequires:      gcc
+BuildRequires:      gcc-c++
+
+%description
+The Brazilian Public Key Infrastructure - ICP-Brasil is a hierarchical chain 
+of trust that enables the issuance of digital certificates for the virtual 
+identification of citizens.
+
+It is observed that the model adopted by Brazil was single-root certification,
+and the ITI, in addition to playing the role of Root Certifying Authority - Root AC,
+also has the role of accrediting and discrediting the other participants in the 
+chain, supervise and audit the processes.
+
+%prep
+%autosetup -n %{name}-%{version}.src
+%{cmake}
+
+%build
+%{cmake_build}
+
+%install
+%{__rm} -rf %{buildroot}
+%{cmake_install}
+
+
+%files
+%{_datadir}/pki/ca-trust-source/anchors/isrg-root-x2.crt
+%{_datadir}/pki/ca-trust-source/anchors/lets-encrypt-ca-bundle.crt
+%{_datadir}/pki/ca-trust-source/anchors/icp-brasil-ca-bundle.crt
+
+
+%post -p %{_bindir}/update-ca-trust
+%postun -p %{_bindir}/update-ca-trust
+
+%changelog
+%autochangelog
