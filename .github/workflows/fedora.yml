@@ -33,7 +33,7 @@ jobs:
     container: ${{ matrix.image }}
 
     steps:
-      - name: Prepare: local checkout
+      - name: Prepare - local checkout
         uses: actions/checkout@v4
 
       - name: Prepare: install build dependencies
@@ -47,23 +47,23 @@ jobs:
             rpmdevtools \
             tar
 
-      - name: Prepare: setup RPM build tree
+      - name: Prepare - setup RPM build tree
         run: |
           rpmdev-setuptree
 
-      - name: Prepare: configure the source
+      - name: Prepare - configure the source
         run: |
           cmake -B $(pwd)/build -S $(pwd)
 
-      - name: Build: create source tarball and SRPM package
+      - name: Build - create source tarball and SRPM package
         run: |
           cmake --build $(pwd)/build --target srpm
 
-      - name: Build: create RPM package
+      - name: Build - create RPM package
         run: |
           cmake --build $(pwd)/build --target rpms
 
-      - name: Publish: create GitHub release
+      - name: Publish - create GitHub release
         uses: softprops/action-gh-release@v2
         if: inputs.to_release == 1
         with:
