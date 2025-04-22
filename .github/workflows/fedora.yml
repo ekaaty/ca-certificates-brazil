@@ -4,16 +4,19 @@ on:
   workflow_call:
     inputs:
       containers:
-        required: true
-        type: string
-      version:
-        required: false
-        type: string
-      to_release:
+        default: "['fedora:latest']"
         required: false
         type: string
       tag:
+        default: "v${{ input.version }}"
         required: false
+        type: string
+      to_release:
+        default: "0"
+        required: false
+        type: string
+      version:
+        required: true
         type: string
 
 defaults:
@@ -30,10 +33,10 @@ jobs:
     container: ${{ matrix.image }}
 
     steps:
-      - name: Local checkout
+      - name: Prepare: local checkout
         uses: actions/checkout@v4
 
-      - name: install RPM build dependencies
+      - name: Prepare: install build dependencies
         run: |
           dnf -y install \
             cmake \
@@ -44,37 +47,26 @@ jobs:
             rpmdevtools \
             tar
 
-      - name: Setup RPM build tree
+      - name: Prepare: setup RPM build tree
         run: |
           rpmdev-setuptree
 
-      - name: Create source tarball
+      - name: Prepare: configure the source
         run: |
-          cmake --fresh -B build -S .
-          cmake --build build --target sdist
+          cmake -B $(pwd)/build -S $(pwd)
 
-      - name: Set environment variables
+      - name: Build: create source tarball and SRPM package
         run: |
-          echo "PKG_VERSION=$(cat build/version)" >> $GITHUB_ENV
-          echo "PKG_NAME=$(grep -Po 'Name:\ *\K[\S ]*' \
-            packaging/pkg.spec.in)" >> $GITHUB_ENV
+          cmake --build $(pwd)/build --target srpm
 
-      - name: Copy SOURCES and SPEC file
+      - name: Build: create RPM package
         run: |
-          cp packaging/pkg.spec.in ~/rpmbuild/SPECS/${PKG_NAME}.spec
-          rpmdev-bumpspec -n ${PKG_VERSION} ~/rpmbuild/SPECS/${PKG_NAME}.spec
-          cp dist/*.src.tar.gz ~/rpmbuild/SOURCES/
+          cmake --build $(pwd)/build --target rpms
 
-      - name: Build RPM packages
-        run: |
-          dnf -y builddep ~/rpmbuild/SPECS/${PKG_NAME}.spec
-          rpmbuild -ba ~/rpmbuild/SPECS/${PKG_NAME}.spec
-
-      - name: Create GitHub Release
+      - name: Publish: create GitHub release
         uses: softprops/action-gh-release@v2
         if: inputs.to_release == 1
         with:
           tag_name: ${{ inputs.tag }}
           files: |
-            ~/rpmbuild/RPMS/*/*.rpm
-            ~/rpmbuild/SRPMS/*.rpm
+            $(pwd)/dist/*.rpm
