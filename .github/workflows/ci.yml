@@ -2,7 +2,7 @@ name: Build and Release CI
 on:
   push:
   schedule:
-    - cron: '30 3 * * *'
+    - cron: '30 4 1,15 * *'
   workflow_dispatch:
 
 jobs:
