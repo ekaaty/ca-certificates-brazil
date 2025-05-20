@@ -32,7 +32,13 @@ include(CPackLists.txt)
 add_custom_target(clear-certs
   COMMAND rm -rf 
     certs/
+    docs/
     pki/
+)
+
+add_custom_target(clear-docs
+  COMMAND rm -rf 
+    docs/
 )
 
 add_custom_target(certs
@@ -44,8 +50,17 @@ add_custom_target(certs
     && cd certs
     && (sha512sum -c --quiet ${HASH_FILE} || exit -1)
     && unzip ACcompactado.zip
+    && rm -f ACcompactado.zip ${HASH_FILE}
   DEPENDS
     clear-certs
+)
+
+add_custom_target(docs ALL
+  COMMAND mkdir docs 
+    && mv certs/*.pdf docs/
+  DEPENDS
+    clear-docs
+    certs
 )
 
 add_custom_target(isrg-root-x2.crt
@@ -82,6 +97,13 @@ add_custom_target(anchors ALL
     icp-brasil-ca-bundle.crt
 )
 
+# Checks for OpeSSL utility
+find_program(OPENSSL
+  NAMES openssl openssl3
+  REQUIRED
+)
+message("-- Check for OpenSSL utility: ${OPENSSL}")
+
 # Checks which tool is used to update certificate keyring
 find_program(UPDATE_CACERTS_TOOL
   NAMES
@@ -108,6 +130,18 @@ install(
     ${CMAKE_CURRENT_BINARY_DIR}/pki/ca-trust-source/anchors/icp-brasil-ca-bundle.crt
   DESTINATION
     ${CMAKE_INSTALL_PREFIX}/${CACERT_INSTALL_DIR}
+)
+
+set(DOCS_INSTALL_DIR "share/doc/${PROJECT}")
+install(
+  FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
+    ${CMAKE_CURRENT_SOURCE_DIR}/README.md
+    ${CMAKE_CURRENT_BINARY_DIR}/docs/cpsrootca.pdf
+    ${CMAKE_CURRENT_BINARY_DIR}/docs/DPCacraiz.pdf
+    ${CMAKE_CURRENT_BINARY_DIR}/docs/PSacraiz.pdf
+  DESTINATION
+    ${CMAKE_INSTALL_PREFIX}/${DOCS_INSTALL_DIR}
 )
 
 # vim: ts=2:sw=2:sts=2:et

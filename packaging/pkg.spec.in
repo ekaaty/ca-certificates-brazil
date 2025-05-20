@@ -42,7 +42,10 @@ chain, supervise and audit the processes.
 %{cmake_install}
 
 
-%files
+%files 
+%doc %{_datadir}/doc/*.pdf
+%doc %{_datadir}/doc/README.md
+%license %{_datadir}/doc/LICENSE
 %{_datadir}/pki/ca-trust-source/anchors/isrg-root-x2.crt
 %{_datadir}/pki/ca-trust-source/anchors/lets-encrypt-ca-bundle.crt
 %{_datadir}/pki/ca-trust-source/anchors/icp-brasil-ca-bundle.crt
