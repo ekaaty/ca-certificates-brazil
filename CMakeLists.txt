@@ -16,6 +16,15 @@ execute_process(
 )
 
 execute_process(
+  COMMAND bash -c
+    "curl -ksI  $(cat ${CMAKE_SOURCE_DIR}/sources) \
+      | grep -iPo '^etag: \\K[\\S ]*' \
+      | base64 -w0
+    "
+  OUTPUT_FILE ${CMAKE_BINARY_DIR}/hash
+)
+
+execute_process(
   COMMAND echo ${PROJECT_VERSION}
   OUTPUT_FILE ${CMAKE_BINARY_DIR}/version
 )
@@ -132,7 +141,7 @@ install(
     ${CMAKE_INSTALL_PREFIX}/${CACERT_INSTALL_DIR}
 )
 
-set(DOCS_INSTALL_DIR "share/doc/${PROJECT}")
+set(DOCS_INSTALL_DIR "share/doc/${PROJECT_NAME}")
 install(
   FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
