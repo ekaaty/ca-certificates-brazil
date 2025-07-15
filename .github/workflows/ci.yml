@@ -8,9 +8,6 @@ on:
 jobs:
   release-ci:
     runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.get_metadata.outputs.tag }}
-      to_release: ${{ steps.newtag.outputs.to_release }}
 
     steps:
       - name: Local checkout
@@ -51,10 +48,8 @@ jobs:
           && git push origin ${{ steps.get_metadata.outputs.tag  }} \
           || exit 0
 
-  build-fedora:
-    needs: release-ci
-    uses: ./.github/workflows/fedora.yml
-    with:
-      containers: "['fedora:latest', 'fedora:41']"
-      to_release: ${{ needs.release-ci.outputs.to_release }}
-      tag: ${{ needs.release-ci.outputs.tag }}
+      - name: Create and publish GitHub release
+        if: steps.newtag.outputs.to_release == 1
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_metadata.outputs.tag }}
