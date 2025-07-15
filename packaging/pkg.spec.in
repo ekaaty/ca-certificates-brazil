@@ -43,9 +43,9 @@ chain, supervise and audit the processes.
 
 
 %files 
-%doc %{_datadir}/doc/*.pdf
-%doc %{_datadir}/doc/README.md
-%license %{_datadir}/doc/LICENSE
+%doc %{_datadir}/doc/%{name}/*.pdf
+%doc %{_datadir}/doc/%{name}/README.md
+%license %{_datadir}/doc/%{name}/LICENSE
 %{_datadir}/pki/ca-trust-source/anchors/isrg-root-x2.crt
 %{_datadir}/pki/ca-trust-source/anchors/lets-encrypt-ca-bundle.crt
 %{_datadir}/pki/ca-trust-source/anchors/icp-brasil-ca-bundle.crt
