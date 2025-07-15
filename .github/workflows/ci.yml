@@ -8,10 +8,6 @@ on:
 jobs:
   release-ci:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.get_metadata.outputs.version }}
-      tag: ${{ steps.get_metadata.outputs.tag }}
-      to_release: ${{ steps.newtag.outputs.to_release }}
 
     steps:
       - name: Local checkout
@@ -20,15 +16,15 @@ jobs:
       - name: Install CI dependencies
         run: |
           sudo apt-get update
-          sudo apt-get -y -qq install cmake g++ gcc
+          sudo apt-get -y -qq install cmake openssl g++ gcc
 
       - name: Get latest package metadata
         id: get_metadata
         run: |
           cmake --fresh -B build -S .
           echo "tag=v$(cat build/version)" >> $GITHUB_OUTPUT
-          echo "version=$(cat build/version)" >> $GITHUB_OUTPUT
-
+          echo "hash=$(sha256sum build/hash | sed 's/\s.*//g')" >> $GITHUB_OUTPUT
+          
       - name: Check if package version has corresponding git tag
         id: tagged
         shell: bash
@@ -43,16 +39,17 @@ jobs:
         id: newtag
         if: steps.tagged.outputs.tagged == 0
         run: |
-          git tag ${{ steps.get_metadata.outputs.tag }} \
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a ${{ steps.get_metadata.outputs.tag }} \
+            -m "New cert chain was released" \
+            --trailer "SHA256:${{ steps.get_metadata.outputs.hash }}" \
           && echo to_release=1 >> $GITHUB_OUTPUT \
           && git push origin ${{ steps.get_metadata.outputs.tag  }} \
           || exit 0
 
-  build-fedora:
-    needs: release-ci
-    uses: ./.github/workflows/fedora.yml
-    with:
-      containers: "['fedora:latest', 'fedora:41']"
-      version: ${{ needs.release-ci.outputs.version }}
-      to_release: ${{ needs.release-ci.outputs.to_release }}
-      tag: ${{ needs.release-ci.outputs.tag }}
+      - name: Create and publish GitHub release
+        if: steps.newtag.outputs.to_release == 1
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_metadata.outputs.tag }}

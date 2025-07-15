@@ -20,7 +20,7 @@ chain, supervise and audit the processes.
 * [Certification Practice Statement Root Certification Authority of Brazil](
     https://acraiz.icpbrasil.gov.br/cpsrootca.pdf
   )
-* [Política de Segurança da AC-Raiz](
+* [Security Policy of Root-CA (in Portuguese)](
     https://acraiz.icpbrasil.gov.br/PSacraiz.pdf
   )
 

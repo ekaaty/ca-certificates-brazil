@@ -3,7 +3,7 @@
 SHELL := bash
 
 source:
-	dnf -y install cmake gcc gcc-c++
+	dnf -y install cmake gcc gcc-c++ openssl
 	cmake --fresh -DBUILD_RPMS=ON -B build -S .
 	cmake --build build --target srpm
 

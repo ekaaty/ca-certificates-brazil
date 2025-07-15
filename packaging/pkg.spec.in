@@ -1,5 +1,6 @@
 %global debug_package %{nil}
 %global source_date_epoch_from_changelog 0
+%global packager Christian Tosta <7252968+christiantosta@users.noreply.github.com>
 
 %define __openssl   %{_bindir}/openssl
 
@@ -43,9 +44,9 @@ chain, supervise and audit the processes.
 
 
 %files 
-%doc %{_datadir}/doc/*.pdf
-%doc %{_datadir}/doc/README.md
-%license %{_datadir}/doc/LICENSE
+%doc %{_datadir}/doc/%{name}/*.pdf
+%doc %{_datadir}/doc/%{name}/README.md
+%license %{_datadir}/doc/%{name}/LICENSE
 %{_datadir}/pki/ca-trust-source/anchors/isrg-root-x2.crt
 %{_datadir}/pki/ca-trust-source/anchors/lets-encrypt-ca-bundle.crt
 %{_datadir}/pki/ca-trust-source/anchors/icp-brasil-ca-bundle.crt
@@ -55,4 +56,4 @@ chain, supervise and audit the processes.
 %postun -p %{_bindir}/update-ca-trust
 
 %changelog
-%autochangelog
+@CPACK_RPM_CHANGELOG@
