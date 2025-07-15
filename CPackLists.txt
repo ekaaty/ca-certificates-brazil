@@ -61,6 +61,14 @@ configure_file(
 )
 
 if(BUILD_RPMS)
+execute_process(
+  COMMAND bash -c
+    "LANG=C DATE=$(date +'%a %b %d %Y'); \
+      echo \"* $DATE %{packager} - ${PROJECT_VERSION}-1%{?dist}\"; \
+      echo \"- This is an automatically built package (See our Git URL for more info).\"; \
+    "
+  OUTPUT_VARIABLE CPACK_RPM_CHANGELOG
+)
 CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/packaging/pkg.spec.in"
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.spec"
   @ONLY 

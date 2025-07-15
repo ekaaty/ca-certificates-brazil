@@ -1,5 +1,6 @@
 %global debug_package %{nil}
 %global source_date_epoch_from_changelog 0
+%global packager Christian Tosta <7252968+christiantosta@users.noreply.github.com>
 
 %define __openssl   %{_bindir}/openssl
 
@@ -55,4 +56,4 @@ chain, supervise and audit the processes.
 %postun -p %{_bindir}/update-ca-trust
 
 %changelog
-%autochangelog
+@CPACK_RPM_CHANGELOG@
