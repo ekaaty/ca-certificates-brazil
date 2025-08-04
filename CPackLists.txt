@@ -72,6 +72,8 @@ execute_process(
     "head -1 \"${CMAKE_CURRENT_SOURCE_DIR}/changelog.txt\" \
       | grep -iPo '.*${CPACK_PACKAGE_VERSION}-\\K[\\d]' \
       | tr -d '\\n' \
+      | grep -P '\\d' \
+    || echo -n 1 \
     "
   OUTPUT_VARIABLE CPACK_RPM_PACKAGE_RELEASE
 )
