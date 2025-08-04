@@ -1,0 +1,2 @@
+* Fri Jul 04 2025 Christian Tosta <7252968+christiantosta@users.noreply.github.com> 2025.07.04-1
+- This is an automatically built package (See our Git URL for more info).

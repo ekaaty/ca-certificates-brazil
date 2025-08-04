@@ -25,6 +25,7 @@ set(SourceIgnoreFiles
   "cmake-build*"
   "cmake_install.cmake"
   "dist/"
+  "temp/"
 )
 
 # Escape any '.' and '/' characters
@@ -62,13 +63,19 @@ configure_file(
 
 if(BUILD_RPMS)
 execute_process(
-  COMMAND bash -c
-    "LANG=C DATE=$(date +'%a %b %d %Y'); \
-      echo \"* $DATE %{packager} - ${PROJECT_VERSION}-1%{?dist}\"; \
-      echo \"- This is an automatically built package (See our Git URL for more info).\"; \
-    "
+  COMMAND cat "${CMAKE_CURRENT_SOURCE_DIR}/changelog.txt"
   OUTPUT_VARIABLE CPACK_RPM_CHANGELOG
 )
+
+execute_process(
+  COMMAND bash -c
+    "head -1 \"${CMAKE_CURRENT_SOURCE_DIR}/changelog.txt\" \
+      | grep -iPo '.*${CPACK_PACKAGE_VERSION}-\\K[\\d]' \
+      | tr -d '\\n' \
+    "
+  OUTPUT_VARIABLE CPACK_RPM_PACKAGE_RELEASE
+)
+
 CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/packaging/pkg.spec.in"
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.spec"
   @ONLY 

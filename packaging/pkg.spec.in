@@ -6,10 +6,10 @@
 
 Name:               ca-certificates-brazil
 Version:            @CPACK_PACKAGE_VERSION@
-Release:            %{autorelease}
+Release:            @CPACK_RPM_PACKAGE_RELEASE@%{?dist}
 Summary:            The ICP-Brasil root certificate bundle
 
-License:            Public Domain
+License:            MIT AND Public Domain
 URL:                https://www.gov.br/iti/pt-br/assuntos/certificado-digital
 Source0:            %{name}-%{version}.tar.gz
 
@@ -20,6 +20,9 @@ BuildRequires:      %{_bindir}/mktemp
 BuildRequires:      %{_bindir}/unzip
 BuildRequires:      gcc
 BuildRequires:      gcc-c++
+Provides:           ca-certificates(ICP-Brasil) = %{version}-%{release}
+Provides:           config(ICP-Brasil) = %{version}-%{release}
+Requires:           %{name}-extras
 
 %description
 The Brazilian Public Key Infrastructure - ICP-Brasil is a hierarchical chain 
@@ -36,24 +39,42 @@ chain, supervise and audit the processes.
 %{cmake}
 
 %build
+BUILD_SHARED_LIBS= \
+CMAKE_CXX_FLAGS_RELEASE= \
+CMAKE_C_FLAGS_RELEASE= \
+CMAKE_Fortran_FLAGS_RELEASE= \
+CMAKE_INSTALL_DO_STRIP= \
+CMAKE_INSTALL_FULL_SBINDIR= \
+CMAKE_INSTALL_SBINDIR= \
+INCLUDE_INSTALL_DIR= \
+LIB_INSTALL_DIR= \
+SHARE_INSTALL_PREFIX= \
+SYSCONF_INSTALL_DIR= \
 %{cmake_build}
 
 %install
 %{__rm} -rf %{buildroot}
 %{cmake_install}
 
-
 %files 
 %doc %{_datadir}/doc/%{name}/*.pdf
 %doc %{_datadir}/doc/%{name}/README.md
 %license %{_datadir}/doc/%{name}/LICENSE
-%{_datadir}/pki/ca-trust-source/anchors/isrg-root-x2.crt
-%{_datadir}/pki/ca-trust-source/anchors/lets-encrypt-ca-bundle.crt
 %{_datadir}/pki/ca-trust-source/anchors/icp-brasil-ca-bundle.crt
-
-
 %post -p %{_bindir}/update-ca-trust
 %postun -p %{_bindir}/update-ca-trust
+
+%package extras
+Summary: Extra Root and Intermediate certificates used by ICP-Brasil
+%description extras
+%{summary}
+
+%files extras
+%license %{_datadir}/doc/%{name}/LICENSE
+%{_datadir}/pki/ca-trust-source/anchors/*.crt
+%exclude %{_datadir}/pki/ca-trust-source/anchors/icp-brasil-ca-bundle.crt
+%post extras -p %{_bindir}/update-ca-trust
+%postun extras -p %{_bindir}/update-ca-trust
 
 %changelog
 @CPACK_RPM_CHANGELOG@
