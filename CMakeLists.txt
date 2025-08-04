@@ -29,72 +29,61 @@ set(SourceFiles
 
 include(CPackLists.txt)
 
+add_custom_target(clear-cache
+  COMMAND rm -rf cache/
+)
+
 add_custom_target(clear-certs
-  COMMAND rm -rf 
-    certs/
-    docs/
-    pki/
+  COMMAND rm -rf certs/
+)
+
+add_custom_target(clear-anchors
+  COMMAND rm -rf pki/
 )
 
 add_custom_target(clear-docs
-  COMMAND rm -rf 
-    docs/
+  COMMAND rm -rf docs/
+)
+
+add_custom_target(clear-all
+  DEPENDS
+    clear-anchors
+    clear-cache
+    clear-certs
+    clear-docs
+)
+
+add_custom_target(sources
+  COMMAND xargs -n1
+    curl
+      --create-dirs
+      --output-dir cache
+      -ksO < ${CMAKE_CURRENT_SOURCE_DIR}/sources
+  DEPENDS
+    clear-cache
 )
 
 add_custom_target(certs
-  COMMAND xargs -n1 
-    curl 
-      --create-dirs 
-      --output-dir certs 
-      -ksO < ${CMAKE_CURRENT_SOURCE_DIR}/sources
-    && cd certs
-    && (sha512sum -c --quiet ${HASH_FILE} || exit -1)
-    && unzip ACcompactado.zip
-    && rm -f ACcompactado.zip ${HASH_FILE}
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/utils/cert-tool extract
+    && ${CMAKE_CURRENT_SOURCE_DIR}/utils/cert-tool classify
   DEPENDS
     clear-certs
-)
-
-add_custom_target(docs ALL
-  COMMAND mkdir docs 
-    && mv certs/*.pdf docs/
-  DEPENDS
-    clear-docs
-    certs
-)
-
-add_custom_target(isrg-root-x2.crt
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/crt2bundle.sh 
-    pki/ca-trust-source/anchors/isrg-root-x2.crt
-    certs/isrg-root-x2.pem
-  DEPENDS
-    certs
-)
-
-add_custom_target(lets-encrypt-ca-bundle.crt
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/crt2bundle.sh
-    pki/ca-trust-source/anchors/lets-encrypt-ca-bundle.crt
-    certs/lets-encrypt-e1.pem
-    certs/lets-encrypt-e2.pem
-    certs/lets-encrypt-r3.pem
-    certs/lets-encrypt-r4.pem
-  DEPENDS
-    certs
-)
-
-add_custom_target(icp-brasil-ca-bundle.crt
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/crt2bundle.sh
-    pki/ca-trust-source/anchors/icp-brasil-ca-bundle.crt
-    certs/*.crt
-  DEPENDS
-    certs
+    sources
 )
 
 add_custom_target(anchors ALL
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/utils/cert-tool anchors
   DEPENDS
-    isrg-root-x2.crt
-    lets-encrypt-ca-bundle.crt
-    icp-brasil-ca-bundle.crt
+    clear-anchors
+    certs
+)
+
+add_custom_target(docs ALL
+  COMMAND mkdir docs
+    && cp cache/*.pdf docs/
+  DEPENDS
+    clear-docs
+    sources
 )
 
 # Checks for OpeSSL utility
@@ -124,12 +113,12 @@ endif()
 message("-- Set install path to CA certificates: ${CACERT_INSTALL_DIR}")
 
 install(
-  FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/pki/ca-trust-source/anchors/isrg-root-x2.crt
-    ${CMAKE_CURRENT_BINARY_DIR}/pki/ca-trust-source/anchors/lets-encrypt-ca-bundle.crt
-    ${CMAKE_CURRENT_BINARY_DIR}/pki/ca-trust-source/anchors/icp-brasil-ca-bundle.crt
+  DIRECTORY 
+    ${CMAKE_CURRENT_BINARY_DIR}/pki/ca-trust-source/anchors/.
   DESTINATION
     ${CMAKE_INSTALL_PREFIX}/${CACERT_INSTALL_DIR}
+  FILES_MATCHING
+    PATTERN "*.crt"
 )
 
 set(DOCS_INSTALL_DIR "share/doc/${PROJECT_NAME}")

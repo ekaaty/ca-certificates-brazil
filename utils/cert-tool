@@ -1,0 +1,176 @@
+#!/bin/bash
+set -euo pipefail
+
+check_cert_validity() {
+  local cert=("${@}")
+
+  # Get validity dates of certificate
+  local expire=$(printf "%s\\n" "${cert[@]:1}" \
+    | openssl x509 \
+      -noout \
+      -dates \
+    | sed '/notAfter/!d;s/notAfter=//g;s/ /\\ /g' \
+    | xargs date +%s -d
+  )
+
+  # Checks if certificate is valid at this date
+  if [[ ${expire} -gt $(date +%s -d now) ]]; then
+    return 0
+  else
+    printf "%s: %s [%s %s]\\n" \
+      $"-- WARNING" \
+      $"Certificate was expired" \
+      $"Fingerprint=(SHA256)" \
+      ${cert[0]}
+    return 1
+  fi
+}
+
+unzip_fingerprint() {
+  local zip_source=${1:-}
+  local fp_algo=sha256
+
+  local files=$(
+      [[ -f "${zip_source}" ]] && \
+        (unzip -qql ${zip_source} | awk '{print $4}')
+    )
+
+  # Unzip cert into array and compute their fingerprint
+  printf "%s: %s\\n" $"Archive" "${zip_source}"
+  local file; for file in ${files}; do
+    readarray -t cert < <(
+      unzip -p ${zip_source} ${file} \
+      | openssl x509 \
+        -fingerprint \
+	      -${fp_algo} \
+      | sed 's/.*Fingerprint=//g;s/://g'
+    )
+
+    # Check validity dates of certificate then writes it to disk
+    if check_cert_validity "${cert[@]}"; then
+      local cert_file="certs/${cert[0]}.crt"
+      printf "  %s %s\\n" $"Inflating" "certs/${file}"
+      #printf "  %s %s\\n" $"Inflating" "certs/${cert[0]}.crt"
+      #printf "  - %s=(%s) %s\\n" "Fingerprint" "${fp_algo^^}" "${cert[0]}"
+      printf "%s\\n" "${cert[@]:1}" > "${cert_file}"
+    fi
+  done
+}
+
+copy_fingerprint() {
+  local cert_source=${1:-}
+  local fp_algo=sha256
+
+  readarray -t cert < <(
+    cat ${cert_source} \
+      | openssl x509 \
+        -fingerprint \
+        -${fp_algo} \
+      | sed 's/.*Fingerprint=//g;s/://g'
+  )
+
+  # Check validity dates of certificate then writes it to disk
+  if check_cert_validity "${cert[@]}"; then
+    local cert_file="certs/${cert[0]}.crt"
+    printf "%s %s\\n" $"Copying" "certs/${cert_source}"
+    printf "%s\\n" "${cert[@]:1}" > "${cert_file}"
+  fi
+}
+
+#split() {
+#  local certs=("${@}")
+#
+#  printf "%s\\n" "${certs[@]}" \
+#  | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' \
+#  | csplit \
+#    --quiet \
+#    --elide-empty-files \
+#    --prefix ${random_prefix:-}-cert \
+#    --suffix-format=-%02d.crt \
+#    - '/-END CERTIFICATE-/1' \
+#   '{*}'
+#}
+
+function extract() {
+  local file
+  mkdir -p certs
+  find cache -type f | while read file; do
+    case "$(file -b --mime-type ${file})" in
+      application/zip) unzip_fingerprint "${file}" ;;
+      application/x-pem-file) copy_fingerprint ${file} ;;
+    esac
+  done
+}
+
+
+function classify() {
+  # Create classified output directories
+  mkdir -p certs/{ca-root,ca-trust,servers}
+
+  # Process and classify generated files
+  echo -e "\n-- CLASSIFYING CACHED CERTIFICATES\n"
+  count=0
+  cert_files=$(find certs/ -maxdepth 1 -type f)
+  for cert_file in ${cert_files}; do
+    fingerprint="(SHA256) ${cert_file}"
+    echo "+ Processing certificate [Fingerprint: ${fingerprint}]"
+    issuer=$(openssl x509 -in "${cert_file}" -noout -issuer | sed 's/^issuer=//g')
+    issuer_o=$(echo "${issuer}" | grep -iPo 'O\s*=\s*\K[^,]+' || :)
+    subject=$(openssl x509 -in "${cert_file}" -noout -subject | sed 's/^subject=//g')
+    subject_o=$(echo "${subject}" | grep -iPo 'O\s*=\s*\K[^,]+' || :)
+    subject_cn=$(echo "${subject}" | grep -iPo 'CN\s*=\s*\K[^,]+' || :)
+    cert_o=$(echo "${subject_o^^}" | sed -E "s/\s/_/g;s/'//g;s/\/.*//g;s/\*\.//g")
+    cert_cn=$(echo "${subject_cn}" | sed -E "s/\s/_/g;s/\/.*//g;s/^\*\./wildcard-/g")
+
+    # save temporary pem file to .CRT file
+    if [[  "${subject_cn}" =~ "gov.br" ]]; then # it's a server certificate
+      cert_crt_file="${issuer_o^^}-${cert_cn}.crt"
+      openssl x509 -in "${cert_file}" -out "certs/servers/${cert_crt_file}"
+      let count=count+1
+    elif [[ "${subject}" == "${issuer}" ]]; then # it's a root certificate (self-signed)
+      cert_crt_file="${cert_o}-${cert_cn}.crt"
+      openssl x509 -in "${cert_file}" -out "certs/ca-root/${cert_crt_file}"
+      let count=count+1
+    else # it's an intermediate certificate
+      cert_crt_file="${cert_o}-${cert_cn}.crt"
+      openssl x509 -in "${cert_file}" -out "certs/ca-trust/${cert_crt_file}"
+      let count=count+1
+    fi
+  done
+  echo "-- Processed certificates: ${count}"
+}
+
+function anchors() {
+  echo -e "\n-- GENERATING P11-KIT SOURCE ANCHORS"
+  
+  local ca_list=$(
+    (for cert in certs/{ca-root,ca-trust}/*.crt; do
+      openssl x509 -in ${cert} -noout -subject \
+        | grep -iPo 'O\s*=\s*\K[^,]+' \
+        | sed -E "s/\s/_/g;s/'//g;s/\/.*//g;s/\*\.//g;s/.*/\U&/";
+     done;
+    for cert in certs/servers/*.crt; do
+      openssl x509 -in ${cert} -noout -issuer \
+        | grep -iPo 'O\s*=\s*\K[^,]+' \
+        | sed -E "s/\s/_/g;s/'//g;s/\/.*//g;s/\*\.//g;s/.*/\U&/";
+    done;) | sort -u)
+
+  for ca in ${ca_list}; do
+    echo -e "\n-> Generating p11-kit source anchors for CA \"${ca}\""
+    local out=pki/ca-trust-source/anchors/${ca,,}-ca-bundle.crt
+    mkdir -p $(dirname ${out}); in=
+    for c in $(find certs/{ca-root,ca-trust,servers}/ -name ${ca}*); do
+      echo "+ Loading CA certificate: ${c}"
+      in="${in} -certfile ${c}"
+    done \
+      && openssl crl2pkcs7 -nocrl ${in} \
+        | openssl pkcs7 -print_certs -out ${out}
+  done
+}
+
+cmd=${@:1}; shift
+${cmd} ${@}
+
+exit 0
+
+# vim: ts=2:sw=2:sts=2:et
